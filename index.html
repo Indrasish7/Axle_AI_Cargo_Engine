@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AXLE AI - Operations Control Room</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <!-- Leaflet JS & CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-container-highest": "#353436",
+                "surface-container-low": "#1c1b1c",
+                "on-surface": "#e5e2e3",
+                "inverse-surface": "#e5e2e3",
+                "tertiary": "#ffba47",
+                "tertiary-container": "#c38400",
+                "background": "#131314",
+                "outline-variant": "#414754",
+                "surface": "#131314",
+                "on-background": "#e5e2e3",
+                "surface-container": "#201f20",
+                "primary-container": "#468fff",
+                "secondary": "#70ffba",
+                "surface-bright": "#3a393a",
+                "surface-container-high": "#2a2a2b",
+                "surface-dim": "#131314",
+                "error": "#ffb4ab",
+                "secondary-container": "#01e599",
+                "error-container": "#93000a",
+                "outline": "#8b919f",
+                "primary": "#acc7ff",
+                "on-primary": "#002f67",
+                "on-secondary": "#003822"
+              },
+              borderRadius: {
+                "DEFAULT": "4px",
+                "lg": "8px",
+                "xl": "12px",
+                "full": "9999px"
+              },
+              fontFamily: {
+                "display-lg": ["Manrope"],
+                "headline-md": ["Manrope"],
+                "mono-data": ["JetBrains Mono"],
+                "body-sm": ["Inter"],
+                "body-md": ["Inter"],
+                "headline-sm": ["Manrope"]
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #070708; /* Obsidian Level 0 */
+            color: #e5e2e3;
+        }
+        
+        /* Level 1 Surface */
+        .surface-level-1 {
+            background-color: #0A0A0B;
+            border: 1px solid #1F1F21;
+        }
+
+        /* Level 2 Floating/Command Bar */
+        .surface-level-2 {
+            background-color: rgba(10, 10, 11, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid #1F1F21;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 24px rgba(94, 107, 255, 0.08);
+        }
+
+        /* Active highlight border */
+        .neon-border-active {
+            box-shadow: 0 0 10px rgba(112, 255, 186, 0.15);
+            border-color: rgba(112, 255, 186, 0.4) !important;
+        }
+        .neon-border-pending {
+            box-shadow: 0 0 10px rgba(255, 186, 71, 0.15);
+            border-color: rgba(255, 186, 71, 0.4) !important;
+        }
+
+        /* Custom Scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070708; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F1F21; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #353436; 
+        }
+
+        /* Table specific styles */
+        .data-table th, .data-table td {
+            border-bottom: 1px solid #1F1F21;
+        }
+        .data-table tr:hover td {
+            background-color: #121214;
+        }
+        .data-table tr.selected td {
+            background-color: rgba(94, 107, 255, 0.06);
+            border-bottom: 1px solid rgba(94, 107, 255, 0.2);
+        }
+
+        /* Multi-view layout support */
+        .view-pane {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .sparkline-fill-error {
+            background: linear-gradient(180deg, rgba(255, 180, 171, 0.15) 0%, rgba(255, 180, 171, 0) 100%);
+        }
+
+        .chart-sparkline-secondary {
+            background: linear-gradient(to bottom, rgba(112, 255, 186, 0.1) 0%, transparent 100%);
+            border-top: 1px solid #70ffba;
+        }
+
+        /* Premium Dark Mode Leaflet Map styles */
+        #fleetMap {
+            height: 250px;
+            background-color: #070708;
+            border-bottom: 1px solid #1F1F21;
+        }
+        .leaflet-container {
+            background-color: #070708 !important;
+            font-family: inherit;
+        }
+        .leaflet-tile {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+        .leaflet-bar {
+            border: 1px solid #1F1F21 !important;
+            box-shadow: none !important;
+            border-radius: 4px !important;
+            overflow: hidden;
+        }
+        .leaflet-bar a {
+            background-color: #0A0A0B !important;
+            color: #e5e2e3 !important;
+            border-bottom: 1px solid #1F1F21 !important;
+        }
+        .leaflet-bar a:hover {
+            background-color: #121214 !important;
+            color: #white !important;
+        }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #0A0A0B !important;
+            color: #e5e2e3 !important;
+            border: 1px solid #1F1F21;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+            border-radius: 4px;
+        }
+        .leaflet-popup-content {
+            margin: 8px 12px !important;
+        }
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #8b919f !important;
+            padding: 4px 4px 0 0 !important;
+        }
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: #white !important;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-body-md font-body-md antialiased">
+    <!-- TopNavBar -->
+    <nav class="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-6 pl-24 h-14 bg-surface-dim border-b border-outline-variant/30 text-primary">
+        <div class="flex items-center gap-3">
+            <span class="text-headline-sm font-headline-sm font-bold tracking-tight text-white flex items-center gap-2">
+                <span class="material-icons text-[#5E6BFF] text-2xl">local_shipping</span>
+                AXLE AI <span class="text-[11px] font-mono-data text-on-surface-variant/40 px-2 py-0.5 rounded border border-outline-variant/20 tracking-widest font-normal">CONTROL ROOM</span>
+            </span>
+        </div>
+        <div class="flex items-center gap-4 text-on-surface-variant">
+            <div class="flex items-center gap-2 text-mono-data text-xs text-secondary bg-secondary/10 px-2.5 py-1 rounded-full border border-secondary/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                <span>GATEWAY ACTIVE // PORT 8000</span>
+            </div>
+            <span class="material-icons hover:text-white transition-colors cursor-pointer text-xl" onclick="showSettings(); return false;">settings</span>
+            <span class="material-icons hover:text-white transition-colors cursor-pointer text-xl" onclick="showNotifications(); return false;">notifications</span>
+            <div class="w-8 h-8 rounded bg-surface-container-high border border-outline-variant/30 flex items-center justify-center text-white text-sm font-bold">
+                A
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 pt-14 pb-8 overflow-hidden">
+        <!-- SideNavBar -->
+        <nav class="fixed left-0 top-0 h-full flex flex-col z-50 py-4 left-0 w-20 hover:w-64 transition-all duration-300 bg-surface-container-low border-r border-outline-variant/20 pt-16 group">
+            <div class="px-6 mb-8 mt-4 overflow-hidden whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div class="text-[11px] font-mono-data font-black text-on-surface-variant tracking-wider">COMMAND CENTER</div>
+                <div class="text-[10px] font-mono-data text-on-surface-variant/40 mt-1">FLEET OPS v1.2</div>
+            </div>
+            <div class="flex-1 flex flex-col gap-2 px-2 overflow-hidden" id="sidenav-links">
+                <!-- Control Room -->
+                <a id="nav-control-room" class="flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-[#5E6BFF] bg-[#5E6BFF]/15 border-r-2 border-[#5E6BFF]" onclick="switchView('control-room'); return false;">
+                    <span class="material-icons text-xl min-w-[20px]">dashboard</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Control Room</span>
+                </a>
+                <!-- Romer Edition -->
+                <a id="nav-romer-edition" class="flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-on-surface-variant hover:bg-surface-container-highest" onclick="switchView('romer-edition'); return false;">
+                    <span class="material-icons text-xl min-w-[20px]">local_shipping</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Romer Edition</span>
+                </a>
+                <!-- Signals Feed -->
+                <a id="nav-signals-feed" class="flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-on-surface-variant hover:bg-surface-container-highest" onclick="switchView('signals-feed'); return false;">
+                    <span class="material-icons text-xl min-w-[20px]">sensors</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Signals Feed</span>
+                </a>
+                <!-- Approvals Queue -->
+                <a id="nav-approvals-queue" class="flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-on-surface-variant hover:bg-surface-container-highest" onclick="switchView('approvals-queue'); return false;">
+                    <span class="material-icons text-xl min-w-[20px]">verified_user</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Approvals Queue</span>
+                </a>
+                <!-- Dashboards Explorer -->
+                <a id="nav-dashboards-explorer" class="flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-on-surface-variant hover:bg-surface-container-highest" onclick="switchView('dashboards-explorer'); return false;">
+                    <span class="material-icons text-xl min-w-[20px]">space_dashboard</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Explorer</span>
+                </a>
+                <!-- Executive Reports -->
+                <a id="nav-executive-reports" class="flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-on-surface-variant hover:bg-surface-container-highest" onclick="switchView('executive-reports'); return false;">
+                    <span class="material-icons text-xl min-w-[20px]">analytics</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Exec Reports</span>
+                </a>
+            </div>
+            <div class="mt-auto flex flex-col gap-2 px-2 overflow-hidden mb-6">
+                <!-- System Status -->
+                <a class="flex items-center gap-4 px-4 py-2 rounded text-on-surface-variant hover:bg-surface-container-highest transition-all cursor-pointer" onclick="showSystemDiagnostics(); return false;">
+                    <span class="material-icons text-xl min-w-[20px] text-secondary">check_circle</span>
+                    <span class="text-xs font-mono-data uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">System Healthy</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 ml-20 flex overflow-hidden relative w-full h-full">
+            
+            <!-- VIEW 1: CONTROL ROOM -->
+            <div id="view-control-room" class="view-pane flex flex-1 overflow-hidden pl-6 pr-6 pt-6 gap-6 h-full w-full">
+                <!-- Left Column: Command & Data Tables -->
+                <div class="flex-1 flex flex-col min-w-0 mx-auto w-full gap-6 h-full overflow-hidden">
+                    <!-- Floating Central Command Bar (Level 2) -->
+                    <div class="surface-level-2 rounded-xl flex items-center px-4 py-3 gap-3 shrink-0 w-full max-w-3xl mx-auto relative z-10">
+                        <span class="material-icons text-on-surface-variant text-xl">search</span>
+                        <input id="commandBar" class="bg-transparent border-none text-mono-data font-mono-data text-on-surface w-full focus:ring-0 placeholder:text-outline-variant p-0 h-6 text-sm" placeholder="Search Bookings, Vehicle IDs, Shipper numbers..." type="text"/>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-[10px] font-mono-data text-outline-variant/60 px-2 py-0.5 rounded bg-surface-container-highest border border-outline-variant/20">CTRL + K</span>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry KPI Summary Cards -->
+                    <div class="grid grid-cols-4 gap-4 shrink-0">
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1.5 transition-all hover:-translate-y-0.5 duration-200">
+                            <span class="text-[10px] font-mono-data font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">ACTIVE FLEET UNITS <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span></span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span id="kpi-active-vehicles" class="text-2xl font-display-lg font-bold text-on-surface">--</span>
+                                <span class="text-xs font-mono-data text-secondary">ACTIVE</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1.5 transition-all hover:-translate-y-0.5 duration-200">
+                            <span class="text-[10px] font-mono-data font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">VOLUME MATCHED (KG) <span class="w-1.5 h-1.5 rounded-full bg-primary"></span></span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span id="kpi-total-weight" class="text-2xl font-display-lg font-bold text-on-surface">--</span>
+                                <span class="text-xs font-mono-data text-primary">CAPACITY</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1.5 transition-all hover:-translate-y-0.5 duration-200">
+                            <span class="text-[10px] font-mono-data font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">ESCROW FUNDS AUTHORIZED <span class="w-1.5 h-1.5 rounded-full bg-[#5E6BFF]"></span></span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span id="kpi-escrow-value" class="text-2xl font-display-lg font-bold text-[#acc7ff]">--</span>
+                                <span class="text-xs font-mono-data text-[#acc7ff]">USD</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1.5 transition-all hover:-translate-y-0.5 duration-200">
+                            <span class="text-[10px] font-mono-data font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">PENDING DISPATCH <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span></span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span id="kpi-active-matches" class="text-2xl font-display-lg font-bold text-tertiary">--</span>
+                                <span class="text-xs font-mono-data text-tertiary">AWAITING</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lower Layout: Bookings Table and Fleet Telemetry Grid -->
+                    <div class="flex-1 flex gap-6 overflow-hidden min-h-0">
+                        <!-- Bookings Ledger Container -->
+                        <div class="surface-level-1 rounded-lg flex-[2] flex flex-col overflow-hidden relative min-w-0">
+                            <!-- Ledger Header -->
+                            <div class="flex justify-between items-center p-3 border-b border-[#1F1F21] bg-[#0A0A0B] shrink-0">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono-data font-bold text-white uppercase tracking-wider">ACTIVE BOOKINGS LEDGER</span>
+                                    <div class="flex items-center gap-1.5" id="ledger-filters">
+                                        <button onclick="setFilter(null)" id="filter-all" class="px-2.5 py-0.5 rounded bg-[#5E6BFF]/20 text-[#acc7ff] border border-[#5E6BFF]/30 text-[10px] font-mono-data hover:bg-[#5E6BFF]/30 transition-all">ALL</button>
+                                        <button onclick="setFilter('PENDING_DISPATCH')" id="filter-pending" class="px-2.5 py-0.5 rounded text-on-surface-variant border border-outline-variant/20 text-[10px] font-mono-data hover:bg-surface-container-highest transition-all">PENDING</button>
+                                        <button onclick="setFilter('ESCROW_AUTHORIZED')" id="filter-escrow" class="px-2.5 py-0.5 rounded text-on-surface-variant border border-outline-variant/20 text-[10px] font-mono-data hover:bg-surface-container-highest transition-all">AUTHORIZED</button>
+                                        <button onclick="setFilter('CONFIRMED')" id="filter-confirmed" class="px-2.5 py-0.5 rounded text-on-surface-variant border border-outline-variant/20 text-[10px] font-mono-data hover:bg-surface-container-highest transition-all">CONFIRMED</button>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] font-mono-data text-on-surface-variant/40">DB: axle_ai.db</span>
+                            </div>
+                            <!-- Bookings Scroll Area -->
+                            <div class="flex-1 overflow-auto">
+                                <table class="w-full text-left border-collapse data-table">
+                                    <thead class="sticky top-0 bg-[#0A0A0B] z-10">
+                                        <tr class="text-[10px] font-mono-data text-on-surface-variant uppercase tracking-wider">
+                                            <th class="py-2.5 px-4 font-medium">BOOKING ID</th>
+                                            <th class="py-2.5 px-4 font-medium">CARGO TYPE</th>
+                                            <th class="py-2.5 px-4 font-medium">ROUTE</th>
+                                            <th class="py-2.5 px-4 font-medium">ASSIGNED UNIT</th>
+                                            <th class="py-2.5 px-4 font-medium">RATE</th>
+                                            <th class="py-2.5 px-4 font-medium">STATUS</th>
+                                            <th class="py-2.5 px-4 font-medium text-right">BOOKED AT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bookings-tbody" class="text-xs text-on-surface font-body-sm">
+                                        <!-- Dynamic rows loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Fleet Telemetry Units Grid -->
+                        <div class="surface-level-1 rounded-lg flex-1 flex flex-col overflow-hidden relative">
+                            <div class="flex justify-between items-center p-3 border-b border-[#1F1F21] bg-[#0A0A0B] shrink-0">
+                                <span class="text-xs font-mono-data font-bold text-white uppercase tracking-wider">FLEET TELEMETRY STATUS</span>
+                                <span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+                            </div>
+                            <!-- Leaflet Map Integration -->
+                            <div id="fleetMap" class="shrink-0 z-0"></div>
+                            <!-- Grid Scroll Area -->
+                            <div class="flex-1 overflow-auto p-4 flex flex-col gap-3" id="telemetry-grid">
+                                <!-- Dynamic vehicle cards loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side Panel: Detail Inspector -->
+                <div id="inspector-panel" class="w-[380px] surface-level-1 rounded-lg flex flex-col shrink-0 h-full overflow-hidden border-t-2 border-t-[#5E6BFF] transition-all duration-300">
+                    <!-- Panel Title Area -->
+                    <div class="p-4 border-b border-[#1F1F21] bg-surface-container-lowest shrink-0">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-mono-data bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant" id="inspect-tag">INSPECTOR</span>
+                            <span class="text-[10px] font-mono-data text-outline-variant" id="inspect-id">SIG-N0NE</span>
+                        </div>
+                        <h2 class="text-lg font-headline-md font-bold text-white font-mono-data truncate" id="inspect-title">Axle AI Engine</h2>
+                        <p class="text-xs text-on-surface-variant mt-0.5" id="inspect-desc">Select any ledger record or fleet vehicle unit to inspect live signals.</p>
+                    </div>
+
+                    <!-- Scrollable Panel Body -->
+                    <div class="flex-1 overflow-auto p-4 flex flex-col gap-5 text-xs">
+                        <!-- Details Grid -->
+                        <div class="flex flex-col gap-3">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">OPERATIONAL CONTEXT</span>
+                            <div class="grid grid-cols-2 gap-y-3 gap-x-4" id="inspect-fields">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">STATUS</span>
+                                    <span class="font-mono-data text-on-surface-variant">NO_SELECTION</span>
+                                </div>
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">TELEMETRY</span>
+                                    <span class="font-mono-data text-on-surface-variant">INACTIVE</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location details -->
+                        <div class="flex flex-col gap-2.5" id="inspect-extra-section">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">GEOSPATIAL COORDINATES</span>
+                            <div class="bg-surface-container-lowest p-3 rounded border border-[#1F1F21] relative flex items-center justify-between">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-[9px] font-mono-data text-on-surface-variant uppercase" id="inspect-coord-label">GPS MATCH FIELD</span>
+                                    <span class="font-mono-data text-white text-xs" id="inspect-coord-val">--</span>
+                                </div>
+                                <span class="material-icons text-[#5E6BFF] text-xl">location_on</span>
+                            </div>
+                        </div>
+
+                        <!-- Sparkline / Transit Details -->
+                        <div class="flex flex-col gap-2.5">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">TRANSIT TRAJECTORY</span>
+                            <div class="h-28 bg-surface-container-lowest border border-[#1F1F21] rounded p-2.5 relative flex items-end">
+                                <div class="absolute inset-0 sparkline-fill opacity-10 rounded"></div>
+                                <div class="absolute w-full h-px bg-[#1F1F21] top-1/2 left-0"></div>
+                                <svg class="absolute inset-0 overflow-visible" height="100%" preserveAspectRatio="none" style="padding: 10px 0;" width="100%">
+                                    <path d="M0 70 Q 50 65, 100 50 T 200 40 T 300 20 T 360 10" fill="none" stroke="#5E6BFF" stroke-linecap="round" stroke-width="1.5"></path>
+                                    <circle class="animate-pulse" cx="330" cy="12" fill="#5E6BFF" r="3.5"></circle>
+                                </svg>
+                                <div class="w-full flex justify-between text-[8px] text-outline-variant font-mono-data absolute bottom-1 px-2 z-10">
+                                    <span>ORIGIN</span>
+                                    <span>TRANSIT</span>
+                                    <span>DESTINATION</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Command Operations Section -->
+                        <div class="flex flex-col gap-3" id="inspect-actions-container">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">SUGGESTED DISPATCH ACTIONS</span>
+                            <div id="inspect-actions-list" class="flex flex-col gap-2">
+                                <span class="text-on-surface-variant/40 italic">Select an active element...</span>
+                            </div>
+                        </div>
+
+                        <!-- Outbound message context -->
+                        <div class="flex flex-col gap-2.5">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">COMMUNICATION MATRIX</span>
+                            <div class="p-3 bg-[#070708] rounded border border-[#1F1F21] flex flex-col gap-2">
+                                <div class="flex justify-between items-center text-[9px] font-mono-data text-on-surface-variant">
+                                    <span>ROUTED GATEWAY</span>
+                                    <span class="text-[#acc7ff]">META_CLOUD_API</span>
+                                </div>
+                                <div class="text-[10px] font-mono-data text-on-surface-variant bg-surface-container-lowest p-2 rounded max-h-24 overflow-y-auto leading-relaxed border border-[#1f1f21] font-mono-data" id="inspect-log-box">
+                                    Waiting for operations selection...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: ROMER EDITION -->
+            <div id="view-romer-edition" class="view-pane hidden flex flex-1 flex-col overflow-auto pl-6 pr-6 pt-6 gap-6 h-full w-full pb-14">
+                <div class="flex justify-between items-center border-b border-[#1F1F21] pb-3 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-base font-mono-data font-bold text-white uppercase tracking-wider">AXLE AI - ROMER EDITION</h2>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-mono-data bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant uppercase">Operator Terminal</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                        <span class="text-[9px] font-mono-data text-secondary uppercase tracking-widest">LIVE SYNC</span>
+                    </div>
+                </div>
+                <div class="flex-1 flex gap-6 min-h-0 overflow-hidden">
+                    <!-- Left: high-density table of bookings -->
+                    <div class="surface-level-1 rounded-lg flex-[1.3] flex flex-col overflow-hidden relative min-w-0">
+                        <div class="p-3 border-b border-[#1F1F21] bg-[#0A0A0B] flex justify-between items-center shrink-0">
+                            <span class="text-xs font-mono-data font-bold text-white uppercase tracking-wider">ROMER BOOKINGS LEDGER</span>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-left border-collapse data-table">
+                                <thead class="sticky top-0 bg-[#0A0A0B] z-10">
+                                    <tr class="text-[10px] font-mono-data text-on-surface-variant uppercase tracking-wider">
+                                        <th class="py-2 px-4 font-medium">RECORD ID</th>
+                                        <th class="py-2 px-4 font-medium">ROUTE</th>
+                                        <th class="py-2 px-4 font-medium">ASSET</th>
+                                        <th class="py-2 px-4 font-medium">STATUS</th>
+                                        <th class="py-2 px-4 font-medium text-right">VALUE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="romer-tbody" class="text-xs font-mono-data text-on-surface">
+                                    <!-- Dynamic rows loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Right: high-density vehicle cards -->
+                    <div class="surface-level-1 rounded-lg flex-1 flex flex-col overflow-hidden relative">
+                        <div class="p-3 border-b border-[#1F1F21] bg-[#0A0A0B] shrink-0">
+                            <span class="text-xs font-mono-data font-bold text-white uppercase tracking-wider">ROMER FLEET GRID</span>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4 flex flex-col gap-3" id="romer-vehicles">
+                            <!-- Dynamic vehicle cards loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: SIGNALS FEED -->
+            <div id="view-signals-feed" class="view-pane hidden flex flex-1 overflow-hidden pl-6 pr-6 pt-6 gap-6 h-full w-full pb-14">
+                <!-- Left Column -->
+                <div class="flex-1 flex flex-col min-w-0 mx-auto w-full gap-6 h-full overflow-hidden">
+                    <div class="grid grid-cols-4 gap-4 shrink-0">
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1">
+                            <span class="text-[9px] font-mono-data font-bold text-on-surface-variant uppercase tracking-wider">ACTIVE SIGNALS</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-on-surface font-mono-data" id="sig-kpi-active">--</span>
+                                <span class="text-[9px] font-mono-data text-secondary uppercase">ACTIVE</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1">
+                            <span class="text-[9px] font-mono-data font-bold text-on-surface-variant uppercase tracking-wider">CRITICAL EVENTS</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-error font-mono-data" id="sig-kpi-critical">--</span>
+                                <span class="text-[9px] font-mono-data text-error uppercase">ALERT</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1">
+                            <span class="text-[9px] font-mono-data font-bold text-on-surface-variant uppercase tracking-wider">AVG LATENCY</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-on-surface font-mono-data" id="sig-kpi-latency">--</span>
+                                <span class="text-[9px] font-mono-data text-[#5E6BFF] uppercase">PING</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1">
+                            <span class="text-[9px] font-mono-data font-bold text-on-surface-variant uppercase tracking-wider">SYSTEM LOAD</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-[#acc7ff] font-mono-data" id="sig-kpi-load">68%</span>
+                                <span class="text-[9px] font-mono-data text-[#acc7ff] uppercase">CPU</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="surface-level-1 rounded-lg flex-1 flex flex-col overflow-hidden relative">
+                        <div class="p-3 border-b border-[#1F1F21] bg-[#0A0A0B] flex justify-between items-center shrink-0">
+                            <span class="text-xs font-mono-data font-bold text-white uppercase tracking-wider">REAL-TIME SIGNAL STREAM</span>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-left border-collapse data-table">
+                                <thead class="sticky top-0 bg-[#0A0A0B] z-10">
+                                    <tr class="text-[10px] font-mono-data text-on-surface-variant uppercase tracking-wider">
+                                        <th class="py-2 px-4 font-medium">SIGNAL NAME</th>
+                                        <th class="py-2 px-4 font-medium">SOURCE</th>
+                                        <th class="py-2 px-4 font-medium">SEVERITY</th>
+                                        <th class="py-2 px-4 font-medium">CONFIDENCE</th>
+                                        <th class="py-2 px-4 font-medium text-right">LAST UPDATE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="signals-tbody" class="text-xs font-mono-data text-on-surface">
+                                    <!-- Dynamic signals go here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Side Panel -->
+                <div class="w-[380px] surface-level-1 rounded-lg flex flex-col shrink-0 h-full overflow-hidden border-t-2 border-t-error">
+                    <div class="p-4 border-b border-[#1F1F21] bg-surface-container-lowest shrink-0">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-error bg-error-container/20 text-[9px] font-mono-data border border-error/30 uppercase" id="sig-detail-sev">CRITICAL</span>
+                                <span class="text-[10px] font-mono-data text-on-surface-variant" id="sig-detail-id">SIG-N0NE</span>
+                            </div>
+                        </div>
+                        <h2 class="text-base font-mono-data font-semibold text-error mb-1 truncate" id="sig-detail-name">No selection</h2>
+                        <p class="text-xs text-on-surface-variant leading-relaxed" id="sig-detail-desc">Select a signal from the stream to inspect raw payload metadata.</p>
+                    </div>
+                    <div class="flex-1 overflow-auto p-4 flex flex-col gap-5 text-xs">
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-mono-data font-bold text-white uppercase">CONFIDENCE TRAJECTORY</span>
+                                <span class="text-mono-data text-error" id="sig-detail-conf">--</span>
+                            </div>
+                            <div class="h-28 bg-surface-container-lowest border border-[#1F1F21] rounded p-2 relative flex items-end">
+                                <div class="absolute inset-0 sparkline-fill-error opacity-10 rounded"></div>
+                                <div class="absolute w-full h-px bg-[#1F1F21] top-1/2 left-0"></div>
+                                <svg class="absolute inset-0 overflow-visible" height="100%" preserveaspectratio="none" style="padding: 10px 0;" width="100%">
+                                    <path d="M0 60 Q 50 65, 100 40 T 200 45 T 300 20 T 360 10" fill="none" stroke="#ffb4ab" stroke-linecap="round" stroke-width="1.5"></path>
+                                    <circle class="animate-pulse" cx="330" cy="15" fill="#ffb4ab" r="3.5"></circle>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-3">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">TECHNICAL CONTEXT</span>
+                            <div class="grid grid-cols-2 gap-y-3 gap-x-4" id="sig-detail-context">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">SOURCE NODE</span>
+                                    <span class="font-mono-data text-white">--</span>
+                                </div>
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">AFFECTED</span>
+                                    <span class="font-mono-data text-white">--</span>
+                                </div>
+                            </div>
+                            <div class="mt-2 bg-[#070708] p-2 rounded border border-[#1F1F21]">
+                                <span class="text-[9px] font-mono-data text-on-surface-variant block mb-1">RAW SIGNAL LOG</span>
+                                <pre class="text-[10px] font-mono-data text-on-surface-variant overflow-x-auto whitespace-pre-wrap max-h-24" id="sig-detail-raw">{
+  "status": "idle"
+}</pre>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-3">
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1">SUGGESTED INCIDENT MITIGATIONS</span>
+                            <div class="flex items-center justify-between p-3 bg-surface-container-low rounded border border-[#1F1F21]">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-icons text-primary text-base">restart_alt</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-body-sm font-semibold">Restart Service Node</span>
+                                        <span class="text-[9px] text-on-surface-variant">Recommended resolution path</span>
+                                    </div>
+                                </div>
+                                <button onclick="showToast('Action Dispatched', 'Dispatched cluster restart event. Rebalancing workloads.', 'check_circle', '#70ffba')" class="bg-[#5E6BFF] text-white px-2.5 py-1.5 rounded text-[9px] font-mono-data uppercase">RESTART</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 4: APPROVALS QUEUE -->
+            <div id="view-approvals-queue" class="view-pane hidden flex-1 flex overflow-hidden pl-6 pr-6 pt-6 gap-6 h-full w-full pb-14">
+                <!-- Left Column: Approvals list -->
+                <div class="flex-1 flex flex-col min-w-0 mx-auto w-full gap-6 h-full overflow-hidden">
+                    <div class="grid grid-cols-3 gap-4 shrink-0">
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1">
+                            <span class="text-[9px] font-mono-data font-bold text-on-surface-variant uppercase tracking-wider">PENDING TASKS</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-tertiary font-mono-data" id="app-kpi-pending">--</span>
+                                <span class="text-[9px] font-mono-data text-tertiary uppercase">AWAITING</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1 border-error-container/40 bg-error-container/5">
+                            <span class="text-[9px] font-mono-data font-bold text-error uppercase tracking-wider">BLOCKED / REFUSED</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-error font-mono-data">0</span>
+                                <span class="text-[9px] font-mono-data text-error uppercase">HOLD</span>
+                            </div>
+                        </div>
+                        <div class="surface-level-1 rounded-lg p-3 flex flex-col gap-1">
+                            <span class="text-[9px] font-mono-data font-bold text-on-surface-variant uppercase tracking-wider">APPROVED TODAY</span>
+                            <div class="flex items-end justify-between mt-1">
+                                <span class="text-xl font-display-lg font-bold text-secondary font-mono-data" id="app-kpi-approved">--</span>
+                                <span class="text-[9px] font-mono-data text-secondary uppercase">SUCCESS</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="surface-level-1 rounded-lg flex-1 flex flex-col overflow-hidden relative">
+                        <div class="p-3 border-b border-[#1F1F21] bg-[#0A0A0B] flex justify-between items-center shrink-0">
+                            <span class="text-xs font-mono-data font-bold text-white uppercase tracking-wider">APPROVALS INBOX</span>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-left border-collapse data-table">
+                                <thead class="sticky top-0 bg-[#0A0A0B] z-10">
+                                    <tr class="text-[10px] font-mono-data text-on-surface-variant uppercase tracking-wider">
+                                        <th class="py-2 px-4 font-medium w-1/2">REQUEST DIRECTIVE</th>
+                                        <th class="py-2 px-4 font-medium">OWNER ID</th>
+                                        <th class="py-2 px-4 font-medium text-right">VALUE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="approvals-tbody" class="text-xs font-mono-data text-on-surface">
+                                    <!-- Dynamic pending approvals go here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Side Panel: Detail View -->
+                <div class="w-[380px] bg-[#0A0A0B] border border-[#1F1F21] rounded-lg flex flex-col shrink-0 h-full overflow-hidden border-t-2 border-t-[#5E6BFF]">
+                    <div class="p-4 border-b border-[#1F1F21] bg-surface-container-lowest shrink-0">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="text-mono-data text-primary font-bold" id="app-detail-id">REQ-N0NE</div>
+                            <span class="px-2 py-0.5 bg-tertiary/10 text-tertiary border border-tertiary/20 text-[9px] font-mono-data rounded uppercase" id="app-detail-risk">HIGH RISK</span>
+                        </div>
+                        <h2 class="text-base font-mono-data font-semibold text-white mb-1 truncate" id="app-detail-title">No selection</h2>
+                        <p class="text-xs text-on-surface-variant leading-relaxed" id="app-detail-desc">Select an approval task from the inbox to analyze cargo and carrier terms.</p>
+                    </div>
+                    <div class="flex-1 overflow-auto p-4 flex flex-col gap-5 text-xs">
+                        <div class="grid grid-cols-2 gap-2" id="app-detail-metrics">
+                            <div class="border border-[#1F1F21] bg-surface-container-lowest p-3 rounded">
+                                <div class="text-[9px] font-mono-data text-on-surface-variant uppercase mb-1">IMPACT VALUE</div>
+                                <div class="text-sm font-mono-data text-white font-bold" id="app-detail-value">--</div>
+                            </div>
+                            <div class="border border-[#1F1F21] bg-surface-container-lowest p-3 rounded">
+                                <div class="text-[9px] font-mono-data text-on-surface-variant uppercase mb-1">WEIGHT LOAD</div>
+                                <div class="text-sm font-mono-data text-white font-bold" id="app-detail-weight">--</div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1 block mb-2">AI SIGNALS AUDIT</span>
+                            <div class="space-y-2" id="app-detail-signals">
+                                <span class="text-on-surface-variant/40 italic">No request active...</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1 block mb-2">GEOSPATIAL PATH</span>
+                            <div class="p-3 bg-surface-container-lowest border border-[#1F1F21] rounded flex items-center justify-between font-mono-data text-white text-xs leading-normal" id="app-detail-route">
+                                --
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Action buttons -->
+                    <div class="p-4 border-t border-[#1F1F21] bg-surface-container-lowest shrink-0 flex gap-3" id="app-detail-actions">
+                        <!-- Dynamic reject/approve hooks -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 5: DASHBOARD EXPLORER -->
+            <div id="view-dashboards-explorer" class="view-pane hidden flex-1 flex flex-col overflow-auto pl-6 pr-6 pt-6 gap-6 h-full w-full pb-14">
+                <div class="flex justify-between items-center border-b border-[#1F1F21] pb-3 shrink-0">
+                    <div>
+                        <h2 class="text-base font-mono-data font-bold text-white uppercase tracking-wider">AXLE AI - DASHBOARDS EXPLORER</h2>
+                        <p class="text-[11px] text-on-surface-variant mt-0.5">Unified operations monitoring dashboards. Auto-refreshed live.</p>
+                    </div>
+                    <button onclick="showToast('Create View', 'Deploying interactive custom view builder widget...', 'add', '#5E6BFF')" class="bg-[#5E6BFF] text-white text-xs font-mono-data px-3.5 py-1.5 rounded uppercase hover:bg-[#5E6BFF]/90 transition-colors shadow-[0_0_15px_rgba(94,107,255,0.2)]">CREATE VIEW</button>
+                </div>
+                <div class="grid grid-cols-3 gap-6 shrink-0">
+                    <!-- Card 1: Executive Command -->
+                    <div class="surface-level-1 rounded-lg p-5 flex flex-col gap-4 col-span-2 group hover:border-[#5E6BFF]/30 transition-all cursor-pointer relative overflow-hidden min-h-[180px]">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                                    <span class="text-[9px] font-mono-data text-secondary uppercase tracking-widest">ACTIVE</span>
+                                </div>
+                                <h3 class="text-base font-mono-data font-bold text-white">Executive Command</h3>
+                                <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">High-level overview of system match times, total matched tonnage, and API latency.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 mt-auto">
+                            <div class="border border-[#1F1F21] rounded bg-[#070708] p-3 flex flex-col justify-between relative overflow-hidden h-16">
+                                <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">SYNC LATENCY</span>
+                                <div class="flex items-end justify-between">
+                                    <span class="text-sm font-mono-data text-primary font-bold" id="exp-latency">12ms</span>
+                                    <span class="text-[9px] font-mono-data text-secondary">OPTIMAL</span>
+                                </div>
+                                <div class="absolute bottom-0 left-0 w-full h-4 chart-sparkline-blue opacity-50"></div>
+                            </div>
+                            <div class="border border-[#1F1F21] rounded bg-[#070708] p-3 flex flex-col justify-between h-16">
+                                <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">ACTIVE MATCHES</span>
+                                <span class="text-sm font-mono-data text-white font-bold" id="exp-matches">--</span>
+                            </div>
+                            <div class="border border-[#1F1F21] rounded bg-[#070708] p-3 flex flex-col justify-between h-16">
+                                <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">INCIDENTS</span>
+                                <span class="text-sm font-mono-data text-secondary font-bold">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2: Revenue & Risk -->
+                    <div class="surface-level-1 rounded-lg p-5 flex flex-col gap-4 col-span-1 group hover:border-error/30 transition-all cursor-pointer relative overflow-hidden min-h-[180px]">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                <span class="text-[9px] font-mono-data text-error uppercase tracking-widest">MONITOR</span>
+                            </div>
+                            <h3 class="text-base font-mono-data font-bold text-white">Revenue & Risk</h3>
+                        </div>
+                        <div class="border border-[#1F1F21] rounded bg-[#070708] p-3 flex flex-col justify-between relative overflow-hidden flex-1 h-14">
+                            <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">ESCROW DEPOSITS</span>
+                            <span class="text-sm font-mono-data text-[#acc7ff] font-bold" id="exp-escrow">--</span>
+                            <div class="absolute bottom-0 left-0 w-full h-1/2 sparkline-fill opacity-25"></div>
+                        </div>
+                    </div>
+                    <!-- Card 3: Database Clusters -->
+                    <div class="surface-level-1 rounded-lg p-5 flex flex-col gap-3 col-span-1 min-h-[200px]">
+                        <h3 class="text-xs font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1.5 mb-1.5">DATABASE CLUSTERS</h3>
+                        <div class="flex flex-col gap-2 font-mono-data text-[10px]">
+                            <div class="flex justify-between border-b border-[#1F1F21] pb-1 text-on-surface-variant">
+                                <span>CLUSTER</span> <span>OPS</span> <span>LAT</span>
+                            </div>
+                            <div class="flex justify-between py-0.5">
+                                <span class="text-white">US-EAST-DB1</span> <span>45k/s</span> <span class="text-secondary">2ms</span>
+                            </div>
+                            <div class="flex justify-between py-0.5">
+                                <span class="text-white">EU-WEST-DB2</span> <span>12k/s</span> <span class="text-secondary">4ms</span>
+                            </div>
+                            <div class="flex justify-between py-0.5">
+                                <span class="text-white">AP-SOUTH-1</span> <span>8k/s</span> <span class="text-tertiary">14ms</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 4: System Telemetry -->
+                    <div class="surface-level-1 rounded-lg p-5 flex flex-col gap-3 col-span-1 min-h-[200px]">
+                        <h3 class="text-xs font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1.5 mb-1.5">SYSTEM TELEMETRY</h3>
+                        <div class="grid grid-cols-2 gap-4 flex-1 items-center">
+                            <div class="border border-[#1F1F21] rounded bg-[#070708] p-3 text-center flex flex-col justify-center">
+                                <span class="text-[9px] font-mono-data text-on-surface-variant uppercase mb-1">CPU LOAD</span>
+                                <span class="text-base font-mono-data text-white font-bold animate-pulse">14%</span>
+                            </div>
+                            <div class="border border-[#1F1F21] rounded bg-[#070708] p-3 text-center flex flex-col justify-center">
+                                <span class="text-[9px] font-mono-data text-on-surface-variant uppercase mb-1">MEM USAGE</span>
+                                <span class="text-base font-mono-data text-white font-bold">32GB</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Dotted Bento Filler Card -->
+                    <div onclick="showToast('Bento Action', 'Subscribing cluster node to visual analytics stream...', 'sync', '#70ffba')" class="rounded-lg border border-dashed border-[#1F1F21] hover:border-[#5E6BFF]/40 transition-colors flex flex-col justify-center items-center gap-2 p-5 text-center cursor-pointer min-h-[200px]">
+                        <span class="material-icons text-on-surface-variant/40 text-2xl">add</span>
+                        <span class="text-xs font-mono-data text-on-surface-variant group-hover:text-primary">Create Custom View Card</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 6: EXECUTIVE REPORTS -->
+            <div id="view-executive-reports" class="view-pane hidden flex-1 flex overflow-hidden pl-6 pr-6 pt-6 gap-6 h-full w-full pb-14">
+                <!-- Left Report Sidebar -->
+                <aside class="w-64 shrink-0 flex flex-col border-r border-[#1F1F21] bg-[#0A0A0B]/40 relative z-10">
+                    <div class="p-3 border-b border-[#1F1F21] flex justify-between items-center bg-[#0A0A0B] shrink-0">
+                        <span class="text-[10px] font-mono-data font-bold text-white uppercase tracking-wider">REPORTS ARCHIVE</span>
+                        <span class="material-icons text-on-surface-variant text-base cursor-pointer">filter_list</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+                        <button class="w-full text-left p-3 rounded bg-surface-container-highest border border-[#1F1F21] flex flex-col gap-1 relative overflow-hidden">
+                            <span class="text-xs font-mono-data text-primary font-semibold">Weekly Operating Review</span>
+                            <span class="text-[9px] font-mono-data text-on-surface-variant">ID: RPT-77A-W34</span>
+                        </button>
+                        <button onclick="showToast('Incident digest', 'Downloading recent security and payload analysis report...', 'download', '#ffba47')" class="w-full text-left p-3 rounded hover:bg-surface-container-low border border-transparent hover:border-[#1F1F21] transition-all flex flex-col gap-1">
+                            <span class="text-xs font-mono-data text-on-surface font-semibold">Incident Digest</span>
+                            <span class="text-[9px] font-mono-data text-on-surface-variant/60">ID: RPT-42B-W34</span>
+                        </button>
+                        <button onclick="showToast('Capacity Forecast', 'Downloading spatial cargo routing forecast analytics...', 'download', '#70ffba')" class="w-full text-left p-3 rounded hover:bg-surface-container-low border border-transparent hover:border-[#1F1F21] transition-all flex flex-col gap-1">
+                            <span class="text-xs font-mono-data text-on-surface font-semibold">Capacity Forecast</span>
+                            <span class="text-[9px] font-mono-data text-on-surface-variant/60">ID: RPT-99C-M08</span>
+                        </button>
+                    </div>
+                </aside>
+                <!-- Center Document View -->
+                <section class="flex-1 flex flex-col overflow-y-auto bg-[#070708] border border-[#1F1F21] rounded-lg p-6 relative">
+                    <header class="flex flex-col gap-3 border-b border-[#1F1F21] pb-4 mb-5">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-icons text-secondary text-base">description</span>
+                                <span class="text-[9px] font-mono-data text-secondary tracking-widest uppercase">SYSTEM GENERATED REPORT</span>
+                            </div>
+                            <span class="text-[10px] font-mono-data text-on-surface-variant border border-[#1F1F21] px-2 py-0.5 rounded bg-[#0A0A0B]">W34 - 2026</span>
+                        </div>
+                        <h1 class="text-lg font-mono-data font-bold text-white">Weekly Operating Review</h1>
+                        <p class="text-[10px] font-mono-data text-on-surface-variant">Generated: 2026-06-01 08:00:00 UTC | Level: Executive Command</p>
+                    </header>
+                    <div class="space-y-6 text-xs leading-relaxed max-w-2xl text-on-surface-variant">
+                        <h3 class="text-xs font-mono-data font-bold text-white border-l-2 border-[#5E6BFF] pl-2 uppercase">Executive Summary</h3>
+                        <p>
+                            FastAPI core engine performance remains within optimal margins. Telemetry polling loops achieved sub-200ms latency. Proximity matching algorithms (100km Haversine geofences) deployed with local thread fallback databases successfully resolved cargo assignments. Twilio Sandbox notifications exposed public HTTPS tunnels safely, registering transaction capture without incidents.
+                        </p>
+                        <h3 class="text-xs font-mono-data font-bold text-white flex items-center gap-2 uppercase">
+                            <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> System Telemetry metrics
+                        </h3>
+                        <div class="grid grid-cols-3 gap-4 font-mono-data text-xs text-white">
+                            <div class="bg-[#0A0A0B] border border-[#1F1F21] rounded p-3 flex flex-col gap-1">
+                                <span class="text-[9px] text-on-surface-variant uppercase">GLOBAL UPTIME</span>
+                                <span class="text-sm font-bold text-secondary">99.998%</span>
+                            </div>
+                            <div class="bg-[#0A0A0B] border border-[#1F1F21] rounded p-3 flex flex-col gap-1">
+                                <span class="text-[9px] text-on-surface-variant uppercase">SYNC LATENCY</span>
+                                <span class="text-sm font-bold text-white" id="rep-latency">12ms</span>
+                            </div>
+                            <div class="bg-[#0A0A0B] border border-[#1F1F21] rounded p-3 flex flex-col gap-1">
+                                <span class="text-[9px] text-on-surface-variant uppercase">ACTIVE NODES</span>
+                                <span class="text-sm font-bold text-white" id="rep-nodes">4,002</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- Right Column: Configuration Panel -->
+                <aside class="w-64 shrink-0 bg-[#0A0A0B] border border-[#1F1F21] rounded-lg p-4 flex flex-col gap-5 overflow-y-auto">
+                    <h3 class="text-[10px] font-mono-data font-bold text-white uppercase border-b border-[#1F1F21] pb-1.5 flex items-center gap-2">
+                        <span class="material-icons text-base text-on-surface-variant">tune</span> CONFIGURATION
+                    </h3>
+                    <div class="flex flex-col gap-3 text-xs">
+                        <span class="text-[9px] font-mono-data text-on-surface-variant uppercase block mb-1">Timeframe</span>
+                        <select class="w-full bg-[#070708] border border-[#1F1F21] text-xs text-on-surface rounded p-2 focus:ring-0 focus:border-[#5E6BFF]">
+                            <option>Current Week (W34)</option>
+                            <option>Previous Week (W33)</option>
+                            <option>Last 30 Days</option>
+                        </select>
+                    </div>
+                    <div class="mt-auto flex flex-col gap-2 shrink-0">
+                        <button onclick="showToast('Report Sync', 'Regenerating Weekly Operating Review from local database tables...', 'sync', '#70ffba')" class="w-full bg-[#5E6BFF] text-white text-xs font-mono-data py-2.5 rounded uppercase hover:bg-[#5E6BFF]/95 transition-all flex justify-center items-center gap-2">
+                            <span class="material-icons text-sm">sync</span> REGENERATE
+                        </button>
+                        <button onclick="showToast('Export', 'Generating pdf capture for Weekly Operating Review...', 'download', '#acc7ff')" class="w-full border border-[#1F1F21] text-white text-xs font-mono-data py-2.5 rounded uppercase hover:bg-surface-container-high transition-all flex justify-center items-center gap-2">
+                            <span class="material-icons text-sm">download</span> EXPORT PDF
+                        </button>
+                    </div>
+                </aside>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <nav class="fixed bottom-0 left-0 w-full z-40 px-6 py-1 flex justify-between items-center bg-surface-container-lowest border-t border-outline-variant/10 text-secondary pl-28">
+        <span class="text-[11px] font-mono-data font-bold text-secondary">AXLE AI v1.2.0-CORE // ACTIVE TRANSACTION RUNNER</span>
+        <div class="flex gap-6 text-[10px] font-mono-data text-on-surface-variant/60">
+            <span>SYNC INTERVAL: 2000MS</span>
+            <span>OS: WINDOWS</span>
+            <span>ENGINE: FASTAPI + SQLITE</span>
+        </div>
+    </nav>
+
+    <!-- State Sync JavaScript Logic -->
+    <script>
+        let currentData = { vehicles: [], bookings: [], stats: {} };
+        let selectedType = null; // 'booking' or 'vehicle'
+        let selectedId = null;   // booking_id or vehicle_id
+        let statusFilter = null; // 'PENDING_DISPATCH', 'ESCROW_AUTHORIZED', 'CONFIRMED' or null
+        let activeView = 'control-room';
+        let selectedSignalId = 'SIG-001';
+        let selectedApprovalId = null;
+
+        // Leaflet Global Map variables
+        let map = null;
+        let mapMarkers = {};
+
+        // Helper to construct pulsing neon Glowing DivIcons for vehicles
+        function createNeonMarker(vehicleId, status) {
+            let glowColor = '#70ffba'; // Available -> Neon emerald
+            if (status === 'ON_TRIP') {
+                glowColor = '#acc7ff'; // On Trip -> Neon blue
+            } else if (status === 'OFFLINE') {
+                glowColor = '#8b919f'; // Offline -> Grey
+            }
+            
+            const html = `
+                <div class="relative flex items-center justify-center w-5 h-5">
+                    <span class="absolute inline-flex rounded-full h-full w-full opacity-75 animate-ping" style="background-color: ${glowColor}"></span>
+                    <span class="relative inline-flex rounded-full h-3.5 w-3.5 shadow-lg border border-white" style="background-color: ${glowColor}"></span>
+                </div>
+            `;
+            
+            return L.divIcon({
+                html: html,
+                className: 'custom-neon-icon',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+        }
+
+        // Initialize Map
+        document.addEventListener('DOMContentLoaded', () => {
+            // Center map on USA coordinates
+            map = L.map('fleetMap', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([37.0902, -95.7129], 4);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18
+            }).addTo(map);
+        });
+
+        // Update map markers dynamically based on incoming API data
+        function updateMapMarkers(vehicles) {
+            if (!map) return;
+            vehicles.forEach(v => {
+                if (v.latitude === null || v.longitude === null) return;
+                const newLatLng = [v.latitude, v.longitude];
+                
+                if (mapMarkers[v.vehicle_id]) {
+                    // Update existing marker lat/lng and icon style if status shifts
+                    mapMarkers[v.vehicle_id].setLatLng(newLatLng);
+                    const icon = createNeonMarker(v.vehicle_id, v.current_status);
+                    mapMarkers[v.vehicle_id].setIcon(icon);
+                    
+                    // Update popup details
+                    mapMarkers[v.vehicle_id].setPopupContent(`
+                        <div class="p-1 font-mono-data text-[10px]">
+                            <div class="font-bold text-white uppercase">${v.vehicle_id}</div>
+                            <div class="text-on-surface-variant">${v.truck_type} - ${v.current_status}</div>
+                            <div class="text-[#acc7ff] mt-0.5">${v.latitude.toFixed(4)}, ${v.longitude.toFixed(4)}</div>
+                        </div>
+                    `);
+                } else {
+                    // Instantiates brand new neon marker
+                    const icon = createNeonMarker(v.vehicle_id, v.current_status);
+                    const marker = L.marker(newLatLng, { icon: icon }).addTo(map);
+                    
+                    marker.bindPopup(`
+                        <div class="p-1 font-mono-data text-[10px]">
+                            <div class="font-bold text-white uppercase">${v.vehicle_id}</div>
+                            <div class="text-on-surface-variant">${v.truck_type} - ${v.current_status}</div>
+                            <div class="text-[#acc7ff] mt-0.5">${v.latitude.toFixed(4)}, ${v.longitude.toFixed(4)}</div>
+                        </div>
+                    `);
+                    mapMarkers[v.vehicle_id] = marker;
+                }
+            });
+        }
+
+        // SPA switch view logic
+        function switchView(viewName) {
+            activeView = viewName;
+            const views = ['control-room', 'romer-edition', 'signals-feed', 'approvals-queue', 'dashboards-explorer', 'executive-reports'];
+            
+            views.forEach(v => {
+                const pane = document.getElementById(`view-${v}`);
+                if (pane) {
+                    if (v === viewName) {
+                        pane.classList.remove('hidden');
+                    } else {
+                        pane.classList.add('hidden');
+                    }
+                }
+                
+                const nav = document.getElementById(`nav-${v}`);
+                if (nav) {
+                    if (v === viewName) {
+                        nav.className = "flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-[#5E6BFF] bg-[#5E6BFF]/15 border-r-2 border-[#5E6BFF]";
+                    } else {
+                        nav.className = "flex items-center gap-4 px-4 py-3 rounded cursor-pointer transition-all text-on-surface-variant hover:bg-surface-container-highest";
+                    }
+                }
+            });
+            
+            showToast("View Swapped", `Switched to ${viewName.replace('-', ' ').toUpperCase()} view.`, "dashboard", "#5E6BFF");
+            if (viewName === 'control-room' && map) {
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+            }
+            syncState();
+        }
+
+        // Fetch loop
+        async function syncState() {
+            try {
+                const res = await fetch('/api/v1/dashboard/data');
+                if (!res.ok) return;
+                const data = await res.json();
+                currentData = data;
+                
+                // 1. Update primary Control Room view
+                updateKPIs(data.stats);
+                renderBookings(data.bookings);
+                renderTelemetry(data.vehicles);
+                updateMapMarkers(data.vehicles);
+                
+                // 2. Update new views
+                renderRomerBookings(data.bookings);
+                renderRomerVehicles(data.vehicles);
+                renderSignals(data);
+                renderApprovalsQueue(data);
+                renderDashboardsExplorer(data);
+                renderExecutiveReports(data);
+                
+                // If there's an active selection, refresh the inspector panel live
+                if (selectedId) {
+                    refreshInspector();
+                }
+            } catch (err) {
+                console.error("State Sync Failure:", err);
+            }
+        }
+
+        // Initialize and schedule loop
+        setInterval(syncState, 2000);
+        syncState();
+
+        // 1. Update KPIs
+        function updateKPIs(stats) {
+            if (!stats) return;
+            document.getElementById('kpi-active-vehicles').textContent = `${stats.active_vehicles} / 6`;
+            document.getElementById('kpi-total-weight').textContent = Number(stats.total_weight_kg).toLocaleString();
+            document.getElementById('kpi-escrow-value').textContent = `$${Number(stats.escrow_value_usd).toLocaleString()}`;
+            document.getElementById('kpi-active-matches').textContent = stats.active_matches.toString().padStart(2, '0');
+        }
+
+        // Filter Setter
+        function setFilter(filterVal) {
+            statusFilter = filterVal;
+            
+            // Highlight active button
+            const buttons = {
+                all: document.getElementById('filter-all'),
+                pending: document.getElementById('filter-pending'),
+                escrow: document.getElementById('filter-escrow'),
+                confirmed: document.getElementById('filter-confirmed')
+            };
+
+            Object.values(buttons).forEach(btn => {
+                btn.className = "px-2.5 py-0.5 rounded text-on-surface-variant border border-outline-variant/20 text-[10px] font-mono-data hover:bg-surface-container-highest transition-all";
+            });
+
+            if (filterVal === null) {
+                buttons.all.className = "px-2.5 py-0.5 rounded bg-[#5E6BFF]/20 text-[#acc7ff] border border-[#5E6BFF]/30 text-[10px] font-mono-data hover:bg-[#5E6BFF]/30 transition-all";
+            } else if (filterVal === 'PENDING_DISPATCH') {
+                buttons.pending.className = "px-2.5 py-0.5 rounded bg-tertiary/20 text-tertiary border border-tertiary/30 text-[10px] font-mono-data hover:bg-tertiary/30 transition-all";
+            } else if (filterVal === 'ESCROW_AUTHORIZED') {
+                buttons.escrow.className = "px-2.5 py-0.5 rounded bg-secondary/20 text-secondary border border-secondary/30 text-[10px] font-mono-data hover:bg-secondary/30 transition-all";
+            } else if (filterVal === 'CONFIRMED') {
+                buttons.confirmed.className = "px-2.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 text-[10px] font-mono-data hover:bg-primary/30 transition-all";
+            }
+
+            renderBookings(currentData.bookings);
+        }
+
+        // 2. Render Bookings table
+        function renderBookings(bookings) {
+            const tbody = document.getElementById('bookings-tbody');
+            const searchVal = document.getElementById('commandBar').value.toLowerCase().trim();
+            
+            let html = '';
+            bookings.forEach(b => {
+                // Apply status filter
+                if (statusFilter && b.status !== statusFilter) return;
+
+                // Apply text search filter
+                if (searchVal) {
+                    const matchesSearch = 
+                        b.booking_id.toLowerCase().includes(searchVal) ||
+                        b.vehicle_id.toLowerCase().includes(searchVal) ||
+                        b.item_type.toLowerCase().includes(searchVal) ||
+                        b.origin.toLowerCase().includes(searchVal) ||
+                        b.destination.toLowerCase().includes(searchVal) ||
+                        b.status.toLowerCase().includes(searchVal) ||
+                        b.shipper_id.toLowerCase().includes(searchVal);
+                    if (!matchesSearch) return;
+                }
+
+                // Determine status colors and shadows
+                let badgeStyle = '';
+                if (b.status === 'ESCROW_AUTHORIZED') {
+                    badgeStyle = 'text-secondary bg-secondary/10 border border-secondary/20 shadow-[0_0_8px_rgba(112,255,186,0.15)]';
+                } else if (b.status === 'PENDING_DISPATCH') {
+                    badgeStyle = 'text-tertiary bg-tertiary/10 border border-tertiary/20 shadow-[0_0_8px_rgba(255,186,71,0.15)]';
+                } else if (b.status === 'CONFIRMED') {
+                    badgeStyle = 'text-primary bg-primary/10 border border-primary/20 shadow-[0_0_8px_rgba(172,199,255,0.15)]';
+                } else {
+                    badgeStyle = 'text-on-surface-variant/70 bg-surface-container-highest border border-outline-variant/30';
+                }
+
+                const isSelected = selectedType === 'booking' && selectedId === b.booking_id;
+                const rowClass = isSelected ? 'selected' : '';
+
+                // Date format
+                const dateStr = b.booked_at ? b.booked_at.split('T')[1].substring(0, 8) : '--';
+
+                html += `
+                    <tr class="cursor-pointer group ${rowClass}" onclick="selectItem('booking', '${b.booking_id}')">
+                        <td class="py-2.5 px-4 font-mono-data font-semibold text-[#5E6BFF] hover:underline">${b.booking_id}</td>
+                        <td class="py-2.5 px-4 font-medium">${b.item_type}</td>
+                        <td class="py-2.5 px-4 text-on-surface-variant">${b.origin} → ${b.destination}</td>
+                        <td class="py-2.5 px-4 font-mono-data">${b.vehicle_id}</td>
+                        <td class="py-2.5 px-4 font-mono-data text-white">$${Number(b.price_booked).toLocaleString()}</td>
+                        <td class="py-2.5 px-4">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-mono-data uppercase ${badgeStyle}">
+                                ${b.status}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-4 text-right font-mono-data text-on-surface-variant/80">${dateStr}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // 3. Render Telemetry cards
+        function renderTelemetry(vehicles) {
+            const grid = document.getElementById('telemetry-grid');
+            const searchVal = document.getElementById('commandBar').value.toLowerCase().trim();
+            
+            let html = '';
+            vehicles.forEach(v => {
+                if (searchVal) {
+                    const matchesSearch = 
+                        v.vehicle_id.toLowerCase().includes(searchVal) ||
+                        v.truck_type.toLowerCase().includes(searchVal) ||
+                        v.current_status.toLowerCase().includes(searchVal) ||
+                        v.driver_phone.toLowerCase().includes(searchVal);
+                    if (!matchesSearch) return;
+                }
+
+                let badgeColor = 'bg-outline-variant';
+                let pulseRing = '';
+                if (v.current_status === 'AVAILABLE') {
+                    badgeColor = 'bg-secondary';
+                    pulseRing = 'animate-ping opacity-75';
+                } else if (v.current_status === 'ON_TRIP') {
+                    badgeColor = 'bg-primary';
+                    pulseRing = 'animate-pulse';
+                }
+
+                const isSelected = selectedType === 'vehicle' && selectedId === v.vehicle_id;
+                const borderClass = isSelected ? (v.current_status === 'AVAILABLE' ? 'neon-border-active' : 'neon-border-pending') : 'border-[#1F1F21]';
+
+                html += `
+                    <div class="surface-level-1 rounded p-3 flex flex-col gap-2 transition-all hover:bg-surface-container-low cursor-pointer border ${borderClass}" onclick="selectItem('vehicle', '${v.vehicle_id}')">
+                        <div class="flex justify-between items-center">
+                            <span class="font-mono-data font-bold text-white text-xs">${v.vehicle_id}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="relative flex h-2 w-2">
+                                    ${pulseRing ? `<span class="animate-ping absolute inline-flex h-full w-full rounded-full ${badgeColor} opacity-75"></span>` : ''}
+                                    <span class="relative inline-flex rounded-full h-2 w-2 ${badgeColor}"></span>
+                                </span>
+                                <span class="text-[9px] font-mono-data uppercase text-on-surface-variant/80">${v.current_status}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-on-surface-variant">
+                            <span>${v.truck_type}</span>
+                            <span class="font-mono-data">Cap: ${Number(v.max_weight_capacity_kg).toLocaleString()} kg</span>
+                        </div>
+                        <div class="bg-surface-container-lowest rounded px-2 py-1 flex items-center justify-between text-[9px] font-mono-data border border-[#1B1B1D]/40">
+                            <span class="text-outline-variant">GPS: ${v.latitude.toFixed(4)}, ${v.longitude.toFixed(4)}</span>
+                            <span class="material-icons text-[#5E6BFF] text-xs">gps_fixed</span>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        // Live Command Search
+        document.getElementById('commandBar').addEventListener('input', () => {
+            renderBookings(currentData.bookings);
+            renderTelemetry(currentData.vehicles);
+        });
+
+        // 4. Select Item (Row or Card)
+        function selectItem(type, id) {
+            selectedType = type;
+            selectedId = id;
+            refreshInspector();
+            
+            // Re-render to show selection highlight borders
+            renderBookings(currentData.bookings);
+            renderTelemetry(currentData.vehicles);
+
+            // Center map on selected items if map is loaded
+            if (map) {
+                if (type === 'vehicle' && mapMarkers[id]) {
+                    const marker = mapMarkers[id];
+                    map.setView(marker.getLatLng(), 8);
+                    marker.openPopup();
+                } else if (type === 'booking') {
+                    const b = currentData.bookings.find(x => x.booking_id === id);
+                    if (b && mapMarkers[b.vehicle_id]) {
+                        const marker = mapMarkers[b.vehicle_id];
+                        map.setView(marker.getLatLng(), 8);
+                        marker.openPopup();
+                    }
+                }
+            }
+        }
+
+        // 5. Update Inspector Live State
+        function refreshInspector() {
+            const tag = document.getElementById('inspect-tag');
+            const inspectId = document.getElementById('inspect-id');
+            const title = document.getElementById('inspect-title');
+            const desc = document.getElementById('inspect-desc');
+            const fields = document.getElementById('inspect-fields');
+            const coordLabel = document.getElementById('inspect-coord-label');
+            const coordVal = document.getElementById('inspect-coord-val');
+            const logBox = document.getElementById('inspect-log-box');
+            const panel = document.getElementById('inspector-panel');
+            const actionsList = document.getElementById('inspect-actions-list');
+
+            if (selectedType === 'booking') {
+                const b = currentData.bookings.find(x => x.booking_id === selectedId);
+                if (!b) return;
+
+                panel.style.borderColor = b.status === 'ESCROW_AUTHORIZED' ? '#70ffba' : (b.status === 'CONFIRMED' ? '#acc7ff' : '#ffba47');
+                tag.textContent = "BOOKING DIRECTIVE";
+                inspectId.textContent = b.booking_id;
+                title.textContent = b.item_type;
+                desc.textContent = `Asynchronously matched to carrier unit ${b.vehicle_id} for shipping from ${b.origin} down to ${b.destination}.`;
+                
+                fields.innerHTML = `
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">BOOKING STATUS</span>
+                        <span class="font-mono-data text-white font-semibold">${b.status}</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">MATCHED VEHICLE</span>
+                        <span class="font-mono-data text-secondary hover:underline cursor-pointer" onclick="selectItem('vehicle', '${b.vehicle_id}')">${b.vehicle_id}</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">CARGO WEIGHT</span>
+                        <span class="font-mono-data text-white">${Number(b.weight_kg).toLocaleString()} kg</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">FREIGHT CHARGES</span>
+                        <span class="font-mono-data text-[#acc7ff] font-bold">$${Number(b.price_booked).toLocaleString()} USD</span>
+                    </div>
+                `;
+
+                coordLabel.textContent = "SHIPPING TERMINAL ROUTE";
+                coordVal.textContent = `${b.origin} ➔ ${b.destination}`;
+
+                // Set actions and log details based on status
+                if (b.status === 'PENDING_DISPATCH') {
+                    logBox.innerHTML = `[PENDING] Awaiting approval trigger 'APPROVE' from shipper ${b.shipper_id}.\nOutbound SMS dispatch formulated.`;
+                    
+                    // Outbound driver details to resolve driver cell phone for manual confirmation simulation
+                    const dbVeh = currentData.vehicles.find(x => x.vehicle_id === b.vehicle_id);
+                    const driverPhone = dbVeh ? dbVeh.driver_phone : '';
+
+                    actionsList.innerHTML = `
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center p-3 bg-surface-container-low rounded border border-[#1F1F21]">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-icons text-secondary text-[20px]">credit_card</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-body-sm font-body-sm font-semibold">Authorize Escrow Funds</span>
+                                        <span class="text-[10px] text-on-surface-variant">Simulate Shipper 'APPROVE'</span>
+                                    </div>
+                                </div>
+                                <button onclick="simulateTwilio('${b.shipper_id}', 'APPROVE', '${b.booking_id}')" class="bg-secondary text-on-secondary px-3 py-1.5 rounded text-[10px] font-mono-data hover:bg-[#70ffba]/80 transition-colors uppercase">APPROVE</button>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-surface-container-low rounded border border-[#1F1F21]">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-icons text-primary text-[20px]">local_shipping</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-body-sm font-body-sm font-semibold">Confirm Dispatch Offer</span>
+                                        <span class="text-[10px] text-on-surface-variant">Simulate Driver 'CONFIRM'</span>
+                                    </div>
+                                </div>
+                                <button onclick="simulateTwilio('${driverPhone}', 'CONFIRM', '${b.booking_id}')" class="bg-primary text-on-primary px-3 py-1.5 rounded text-[10px] font-mono-data hover:bg-[#acc7ff]/80 transition-colors uppercase">CONFIRM</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (b.status === 'CONFIRMED') {
+                    logBox.innerHTML = `[CONFIRMED] Driver has locked in dispatch booking. Gate pass issued.\nAwaiting shipper escrow payment 'APPROVE' to authorize transport.`;
+                    
+                    actionsList.innerHTML = `
+                        <div class="flex justify-between items-center p-3 bg-surface-container-low rounded border border-[#1F1F21]">
+                            <div class="flex items-center gap-3">
+                                <span class="material-icons text-secondary text-[20px]">credit_card</span>
+                                <div class="flex flex-col">
+                                    <span class="text-body-sm font-body-sm font-semibold">Authorize Escrow Funds</span>
+                                    <span class="text-[10px] text-on-surface-variant">Simulate Shipper 'APPROVE'</span>
+                                </div>
+                            </div>
+                            <button onclick="simulateTwilio('${b.shipper_id}', 'APPROVE', '${b.booking_id}')" class="bg-secondary text-on-secondary px-3 py-1.5 rounded text-[10px] font-mono-data hover:bg-[#70ffba]/80 transition-colors uppercase">APPROVE</button>
+                        </div>
+                    `;
+                } else if (b.status === 'ESCROW_AUTHORIZED') {
+                    logBox.innerHTML = `[ESCROW AUTHORIZED] Payment captured successfully for booking ${b.booking_id}.\nEscrow secured. Transport has been scheduled.`;
+                    actionsList.innerHTML = `
+                        <div class="p-3 bg-surface-container-lowest rounded border border-secondary/20 flex items-center gap-3 text-secondary text-xs">
+                            <span class="material-icons">check_circle</span>
+                            <span>Escrow secured. Dispatch matching is successfully closed and matched.</span>
+                        </div>
+                    `;
+                }
+
+            } else if (selectedType === 'vehicle') {
+                const v = currentData.vehicles.find(x => x.vehicle_id === selectedId);
+                if (!v) return;
+
+                panel.style.borderColor = v.current_status === 'AVAILABLE' ? '#70ffba' : '#468fff';
+                tag.textContent = "TELEMETRY MONITOR";
+                inspectId.textContent = v.vehicle_id;
+                title.textContent = v.truck_type;
+                desc.textContent = `Seeded in-memory geospatial caching tracker with persistent float storage sync.`;
+
+                fields.innerHTML = `
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">TELEMETRY STATE</span>
+                        <span class="font-mono-data text-white font-semibold">${v.current_status}</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">MAX WEIGHT CAPACITY</span>
+                        <span class="font-mono-data text-white">${Number(v.max_weight_capacity_kg).toLocaleString()} kg</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5 flex-1">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">DRIVER CELL</span>
+                        <span class="font-mono-data text-on-surface-variant font-medium">${v.driver_phone || 'None'}</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5 flex-1">
+                        <span class="text-[9px] font-mono-data text-outline-variant uppercase">ACTIVE GEOM POINT</span>
+                        <span class="font-mono-data text-white">Composite mapped</span>
+                    </div>
+                `;
+
+                coordLabel.textContent = "LAST REGISTERED GPS MODULE PING";
+                coordVal.textContent = `${v.latitude.toFixed(6)}, ${v.longitude.toFixed(6)}`;
+
+                logBox.innerHTML = `[SYNC] Ping registered from telemetry tracker ${v.vehicle_id}.\nHaversine index matched. persistent SQL columns updated.`;
+
+                // Telemetry simulation controls
+                actionsList.innerHTML = `
+                    <div class="flex flex-col gap-2">
+                        <div class="flex justify-between items-center p-3 bg-surface-container-low rounded border border-[#1F1F21]">
+                            <div class="flex items-center gap-3">
+                                <span class="material-icons text-[#5E6BFF] text-[20px]">play_circle</span>
+                                <div class="flex flex-col">
+                                    <span class="text-body-sm font-body-sm font-semibold">Simulate Transit step</span>
+                                    <span class="text-[10px] text-on-surface-variant">Push live telemetry ping</span>
+                                </div>
+                            </div>
+                            <button onclick="simulateTelemetry('${v.vehicle_id}', ${v.latitude}, ${v.longitude})" class="bg-[#5E6BFF] text-white px-3 py-1.5 rounded text-[10px] font-mono-data hover:bg-[#5E6BFF]/85 transition-colors uppercase">STREAM PING</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 6. Simulate Twilio Inbound Request (APPROVE / CONFIRM)
+        async function simulateTwilio(fromNumber, bodyText, bookingId) {
+            if (!fromNumber) {
+                showToast("Registration Missing", "Driver phone number not registered for this carrier unit.", "warning", "#ffba47");
+                return;
+            }
+            try {
+                // Post as Meta WhatsApp JSON webhook format
+                const rawPhone = fromNumber.replace("whatsapp:", "");
+                const phoneId = "1149351458260985";
+                const payload = {
+                    object: "whatsapp_business_account",
+                    entry: [{
+                        id: phoneId,
+                        changes: [{
+                            value: {
+                                messaging_product: "whatsapp",
+                                metadata: {
+                                    display_phone_number: "15550000000",
+                                    phone_number_id: phoneId
+                                },
+                                contacts: [{
+                                    profile: { name: "Simulated User" },
+                                    wa_id: rawPhone
+                                }],
+                                messages: [{
+                                    from: rawPhone,
+                                    id: "wamid.SimulatedMsgID" + Date.now(),
+                                    timestamp: Math.floor(Date.now() / 1000).toString(),
+                                    text: { body: bodyText },
+                                    type: "text"
+                                }]
+                            },
+                            field: "messages"
+                        }]
+                    }]
+                };
+
+                const res = await fetch('/webhook/v1/whatsapp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    const result = await res.json();
+                    showToast(
+                        "Signal Dispatched", 
+                        `Type: ${bodyText} matches state transition.<br>Routed To: ${result.routed_to.toUpperCase()}<br>Sender ID: ${result.sender_id}`, 
+                        "check_circle", 
+                        "#70ffba"
+                    );
+                    syncState();
+                } else {
+                    showToast("Simulate Failed", `Failed to simulate Meta webhook POST: ${res.statusText}`, "error", "#ffb4ab");
+                }
+            } catch (err) {
+                console.error("Meta webhook simulation failure:", err);
+                showToast("Network Exception", "Meta webhook simulation request encountered a network exception.", "error", "#ffb4ab");
+            }
+        }
+
+        // 7. Simulate Fleet Telemetry Coordinate Movement Step
+        async function simulateTelemetry(vehicleId, currentLat, currentLng) {
+            // Move slightly north-east along a simulated route line
+            const nextLat = currentLat + 0.0025;
+            const nextLng = currentLng + 0.0035;
+            try {
+                const res = await fetch('/api/v1/fleet/telemetry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vehicle_id: vehicleId,
+                        latitude: nextLat,
+                        longitude: nextLng
+                    })
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    showToast(
+                        "GPS Ping Streamed", 
+                        `Vehicle: ${vehicleId}<br>New coordinates: ${nextLat.toFixed(4)}, ${nextLng.toFixed(4)}`, 
+                        "sensors", 
+                        "#acc7ff"
+                    );
+                    // Auto-select the vehicle to refresh the coordinate values in the inspector immediately
+                    selectedType = 'vehicle';
+                    selectedId = vehicleId;
+                    syncState();
+                } else {
+                    showToast("Telemetry Failed", `Failed to stream telemetry coordinates: ${res.statusText}`, "error", "#ffb4ab");
+                }
+            } catch (err) {
+                console.error("Telemetry coordinate stream failure:", err);
+                showToast("Network Exception", "Telemetry coordinate stream encountered a network exception.", "error", "#ffb4ab");
+            }
+        }
+
+        // --- NEW DYNAMIC RENDERING FUNCTIONS FOR EXTRA VIEWS ---
+
+        // Romer Edition rendering routines
+        function renderRomerBookings(bookings) {
+            const tbody = document.getElementById('romer-tbody');
+            if (!tbody) return;
+            let html = '';
+            bookings.forEach(b => {
+                let badgeStyle = '';
+                if (b.status === 'ESCROW_AUTHORIZED') {
+                    badgeStyle = 'text-secondary bg-secondary/10 border border-secondary/20 shadow-[0_0_8px_rgba(112,255,186,0.15)]';
+                } else if (b.status === 'PENDING_DISPATCH') {
+                    badgeStyle = 'text-tertiary bg-tertiary/10 border border-tertiary/20 shadow-[0_0_8px_rgba(255,186,71,0.15)]';
+                } else if (b.status === 'CONFIRMED') {
+                    badgeStyle = 'text-primary bg-primary/10 border border-primary/20 shadow-[0_0_8px_rgba(172,199,255,0.15)]';
+                } else {
+                    badgeStyle = 'text-on-surface-variant/70 bg-surface-container-highest border border-outline-variant/30';
+                }
+                
+                html += `
+                    <tr class="cursor-pointer group hover:bg-[#121214]" onclick="selectItem('booking', '${b.booking_id}')">
+                        <td class="py-2 px-4 font-semibold text-[#5E6BFF] hover:underline">${b.booking_id}</td>
+                        <td class="py-2 px-4 text-on-surface-variant">${b.origin} → ${b.destination}</td>
+                        <td class="py-2 px-4">${b.vehicle_id}</td>
+                        <td class="py-2 px-4">
+                            <span class="px-2 py-0.5 rounded text-[9px] uppercase ${badgeStyle}">
+                                ${b.status}
+                            </span>
+                        </td>
+                        <td class="py-2 px-4 text-right text-white font-bold">$${Number(b.price_booked).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderRomerVehicles(vehicles) {
+            const grid = document.getElementById('romer-vehicles');
+            if (!grid) return;
+            let html = '';
+            vehicles.forEach(v => {
+                let badgeColor = 'bg-outline-variant';
+                let pulseRing = '';
+                if (v.current_status === 'AVAILABLE') {
+                    badgeColor = 'bg-secondary';
+                    pulseRing = 'animate-ping opacity-75';
+                } else if (v.current_status === 'ON_TRIP') {
+                    badgeColor = 'bg-primary';
+                    pulseRing = 'animate-pulse';
+                }
+                
+                const isSelected = selectedType === 'vehicle' && selectedId === v.vehicle_id;
+                const borderClass = isSelected ? (v.current_status === 'AVAILABLE' ? 'neon-border-active' : 'neon-border-pending') : 'border-[#1F1F21]';
+                
+                html += `
+                    <div class="surface-level-1 rounded p-3 flex flex-col gap-2 transition-all hover:bg-surface-container-low cursor-pointer border ${borderClass}" onclick="selectItem('vehicle', '${v.vehicle_id}')">
+                        <div class="flex justify-between items-center">
+                            <span class="font-mono-data font-bold text-white text-xs">${v.vehicle_id}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="relative flex h-2 w-2">
+                                    ${pulseRing ? `<span class="animate-ping absolute inline-flex h-full w-full rounded-full ${badgeColor} opacity-75"></span>` : ''}
+                                    <span class="relative inline-flex rounded-full h-2 w-2 ${badgeColor}"></span>
+                                </span>
+                                <span class="text-[9px] font-mono-data uppercase text-on-surface-variant/80">${v.current_status}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-on-surface-variant">
+                            <span>${v.truck_type}</span>
+                            <span class="font-mono-data">Cap: ${Number(v.max_weight_capacity_kg).toLocaleString()} kg</span>
+                        </div>
+                        <div class="bg-surface-container-lowest rounded px-2 py-1 flex items-center justify-between text-[9px] font-mono-data border border-[#1B1B1D]/40">
+                            <span class="text-outline-variant">GPS: ${v.latitude.toFixed(4)}, ${v.longitude.toFixed(4)}</span>
+                            <span class="material-icons text-[#5E6BFF] text-xs">gps_fixed</span>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        // Signals Feed rendering routines
+        function renderSignals(data) {
+            const tbody = document.getElementById('signals-tbody');
+            if (!tbody) return;
+            
+            const signals = [
+                {
+                    id: 'SIG-001',
+                    name: 'Geocoding Resolution',
+                    source: 'GEO_ENGINE_US',
+                    severity: 'INFO',
+                    confidence: '99.4%',
+                    desc: 'Resolved spatial geocoding query successfully for incoming shipper load.',
+                    raw: { status: "success", resolution: "haversine_closest", cache: "hit" }
+                },
+                {
+                    id: 'SIG-002',
+                    name: 'State Sync Ping',
+                    source: 'DB_REPLICA_EU',
+                    severity: 'INFO',
+                    confidence: '100%',
+                    desc: 'Relational database transaction sync completed.',
+                    raw: { status: "success", ping_latency_ms: 2.1, replica_lag: 0 }
+                }
+            ];
+
+            data.bookings.forEach((b, idx) => {
+                let sev = 'INFO';
+                let conf = '98.5%';
+                let desc = '';
+                if (b.status === 'PENDING_DISPATCH') {
+                    sev = 'WARNING';
+                    conf = '84.2%';
+                    desc = `Booking ${b.booking_id} requires dispatch authorization. Shipper webhook offer issued.`;
+                } else if (b.status === 'ESCROW_AUTHORIZED') {
+                    sev = 'SUCCESS';
+                    conf = '99.9%';
+                    desc = `Escrow payment secured for booking ${b.booking_id}. Transit route locked.`;
+                } else if (b.status === 'CONFIRMED') {
+                    sev = 'INFO';
+                    conf = '97.8%';
+                    desc = `Driver confirmed booking ${b.booking_id}. Outbound gate pass generated.`;
+                }
+                signals.push({
+                    id: `SIG-B${idx+1}`,
+                    name: `Booking Directive ${b.booking_id}`,
+                    source: 'MATCHER_NODE',
+                    severity: sev,
+                    confidence: conf,
+                    desc: desc,
+                    raw: { booking_id: b.booking_id, status: b.status, shipper: b.shipper_id, vehicle: b.vehicle_id }
+                });
+            });
+
+            data.vehicles.forEach((v, idx) => {
+                let sev = 'INFO';
+                let conf = '99.1%';
+                let desc = `Vehicle telemetry update for ${v.vehicle_id}. Current status: ${v.current_status}.`;
+                signals.push({
+                    id: `SIG-V${idx+1}`,
+                    name: `Telemetry Stream ${v.vehicle_id}`,
+                    source: 'GPS_IOT_MODULE',
+                    severity: sev,
+                    confidence: conf,
+                    desc: desc,
+                    raw: { vehicle_id: v.vehicle_id, lat: v.latitude, lng: v.longitude, capacity: v.max_weight_capacity_kg }
+                });
+            });
+
+            document.getElementById('sig-kpi-active').textContent = signals.length;
+            const criticalCount = signals.filter(s => s.severity === 'CRITICAL' || s.severity === 'WARNING').length;
+            document.getElementById('sig-kpi-critical').textContent = criticalCount;
+            document.getElementById('sig-kpi-latency').textContent = `${(Math.random() * 5 + 8).toFixed(1)}ms`;
+
+            let html = '';
+            signals.forEach(s => {
+                let sevClass = '';
+                if (s.severity === 'CRITICAL') sevClass = 'text-error bg-error/10 border border-error/20';
+                else if (s.severity === 'WARNING') sevClass = 'text-tertiary bg-tertiary/10 border border-tertiary/20';
+                else if (s.severity === 'SUCCESS') sevClass = 'text-secondary bg-secondary/10 border border-secondary/20';
+                else sevClass = 'text-primary bg-primary/10 border border-primary/20';
+
+                const isSelected = selectedSignalId === s.id;
+                const rowClass = isSelected ? 'selected bg-surface-container-highest' : '';
+
+                html += `
+                    <tr class="cursor-pointer group hover:bg-[#121214] ${rowClass}" onclick="selectSignal('${s.id}')">
+                        <td class="py-2.5 px-4 font-semibold text-[#5E6BFF] hover:underline">${s.name}</td>
+                        <td class="py-2.5 px-4 text-on-surface-variant">${s.source}</td>
+                        <td class="py-2.5 px-4">
+                            <span class="px-2 py-0.5 rounded text-[9px] uppercase ${sevClass}">
+                                ${s.severity}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-4 font-mono-data text-white">${s.confidence}</td>
+                        <td class="py-2.5 px-4 text-right text-on-surface-variant/80">Just now</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+
+            const currentSig = signals.find(s => s.id === selectedSignalId) || signals[0];
+            if (currentSig) {
+                const detailSev = document.getElementById('sig-detail-sev');
+                if (detailSev) {
+                    detailSev.textContent = currentSig.severity;
+                    if (currentSig.severity === 'CRITICAL' || currentSig.severity === 'WARNING') {
+                        detailSev.className = 'px-2 py-0.5 rounded text-error bg-error-container/20 text-[9px] font-mono-data border border-error/30 uppercase';
+                    } else {
+                        detailSev.className = 'px-2 py-0.5 rounded text-secondary bg-secondary/20 text-[9px] font-mono-data border border-secondary/30 uppercase';
+                    }
+                }
+                
+                const idEl = document.getElementById('sig-detail-id');
+                if (idEl) idEl.textContent = currentSig.id;
+                
+                const nameEl = document.getElementById('sig-detail-name');
+                if (nameEl) nameEl.textContent = currentSig.name;
+                
+                const descEl = document.getElementById('sig-detail-desc');
+                if (descEl) descEl.textContent = currentSig.desc;
+                
+                const confEl = document.getElementById('sig-detail-conf');
+                if (confEl) confEl.textContent = currentSig.confidence;
+                
+                const contextEl = document.getElementById('sig-detail-context');
+                if (contextEl) {
+                    contextEl.innerHTML = `
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">SOURCE NODE</span>
+                            <span class="font-mono-data text-white font-semibold">${currentSig.source}</span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[9px] font-mono-data text-on-surface-variant uppercase">AFFECTED</span>
+                            <span class="font-mono-data text-[#acc7ff] font-semibold">${currentSig.id.startsWith('SIG-B') ? 'Booking Table' : (currentSig.id.startsWith('SIG-V') ? 'Vehicle Telemetry' : 'System Engine')}</span>
+                        </div>
+                    `;
+                }
+                
+                const rawEl = document.getElementById('sig-detail-raw');
+                if (rawEl) rawEl.textContent = JSON.stringify(currentSig.raw, null, 2);
+            }
+        }
+
+        function selectSignal(id) {
+            selectedSignalId = id;
+            renderSignals(currentData);
+        }
+
+        // Approvals Queue rendering routines
+        function renderApprovalsQueue(data) {
+            const tbody = document.getElementById('approvals-tbody');
+            if (!tbody) return;
+
+            const pendingBookings = data.bookings.filter(b => b.status === 'PENDING_DISPATCH' || b.status === 'CONFIRMED');
+            const approvedBookings = data.bookings.filter(b => b.status === 'ESCROW_AUTHORIZED');
+
+            document.getElementById('app-kpi-pending').textContent = pendingBookings.length.toString().padStart(2, '0');
+            document.getElementById('app-kpi-approved').textContent = approvedBookings.length.toString().padStart(2, '0');
+
+            if (!selectedApprovalId && pendingBookings.length > 0) {
+                selectedApprovalId = pendingBookings[0].booking_id;
+            }
+
+            let html = '';
+            if (pendingBookings.length === 0) {
+                html = `
+                    <tr>
+                        <td colspan="3" class="py-8 text-center text-on-surface-variant/40 italic">
+                            All approvals processed successfully. Queue is clear!
+                        </td>
+                    </tr>
+                `;
+            } else {
+                pendingBookings.forEach(b => {
+                    const isSelected = selectedApprovalId === b.booking_id;
+                    const rowClass = isSelected ? 'selected bg-surface-container-highest' : '';
+
+                    html += `
+                        <tr class="cursor-pointer group hover:bg-[#121214] ${rowClass}" onclick="selectApproval('${b.booking_id}')">
+                            <td class="py-3 px-4">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="font-mono-data font-semibold text-[#5E6BFF] hover:underline">${b.booking_id}</span>
+                                    <span class="text-on-surface-variant text-[11px]">${b.item_type} (${b.origin} ➔ ${b.destination})</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4 font-mono-data text-on-surface-variant">${b.shipper_id || 'whatsapp:+917001203363'}</td>
+                            <td class="py-3 px-4 text-right font-mono-data text-white font-bold">$${Number(b.price_booked).toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+            }
+            tbody.innerHTML = html;
+
+            const appDetailId = document.getElementById('app-detail-id');
+            const appDetailRisk = document.getElementById('app-detail-risk');
+            const appDetailTitle = document.getElementById('app-detail-title');
+            const appDetailDesc = document.getElementById('app-detail-desc');
+            const appDetailValue = document.getElementById('app-detail-value');
+            const appDetailWeight = document.getElementById('app-detail-weight');
+            const appDetailSignals = document.getElementById('app-detail-signals');
+            const appDetailRoute = document.getElementById('app-detail-route');
+            const appDetailActions = document.getElementById('app-detail-actions');
+
+            const activeApp = pendingBookings.find(x => x.booking_id === selectedApprovalId);
+
+            if (activeApp) {
+                if (appDetailId) appDetailId.textContent = activeApp.booking_id;
+                
+                const isHighRisk = activeApp.price_booked > 5000 || activeApp.weight_kg > 20000;
+                if (appDetailRisk) {
+                    appDetailRisk.textContent = isHighRisk ? "HIGH RISK" : "STANDARD RISK";
+                    appDetailRisk.className = isHighRisk 
+                        ? "px-2 py-0.5 bg-error/10 text-error border border-error/20 text-[9px] font-mono-data rounded uppercase"
+                        : "px-2 py-0.5 bg-secondary/10 text-secondary border border-secondary/20 text-[9px] font-mono-data rounded uppercase";
+                }
+
+                if (appDetailTitle) appDetailTitle.textContent = activeApp.item_type;
+                if (appDetailDesc) appDetailDesc.textContent = `Cargo directive matched to ${activeApp.vehicle_id}. Shipper requires automated SMS callback validation to lock in live escrow authorization.`;
+                if (appDetailValue) appDetailValue.textContent = `$${Number(activeApp.price_booked).toLocaleString()} USD`;
+                if (appDetailWeight) appDetailWeight.textContent = `${Number(activeApp.weight_kg).toLocaleString()} kg`;
+
+                if (appDetailSignals) {
+                    appDetailSignals.innerHTML = `
+                        <div class="flex items-center justify-between py-1 border-b border-[#1f1f21]">
+                            <span class="text-on-surface-variant">Geocoding Score</span>
+                            <span class="text-secondary font-mono-data">99.8%</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1 border-b border-[#1f1f21]">
+                            <span class="text-on-surface-variant">Capacity Margin</span>
+                            <span class="text-secondary font-mono-data">Optimal (+15%)</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-on-surface-variant">SMS Deliverability</span>
+                            <span class="text-primary font-mono-data">Twilio Verified</span>
+                        </div>
+                    `;
+                }
+
+                if (appDetailRoute) {
+                    appDetailRoute.innerHTML = `
+                        <div class="flex flex-col gap-0.5 w-full">
+                            <span class="text-[8px] font-mono-data text-outline-variant uppercase">DEPARTURE ROUTE</span>
+                            <span class="text-xs text-white font-semibold truncate">${activeApp.origin} ➔ ${activeApp.destination}</span>
+                        </div>
+                    `;
+                }
+
+                if (appDetailActions) {
+                    appDetailActions.innerHTML = `
+                        <button id="btn-approve-escrow" onclick="simulateTwilio('${activeApp.shipper_id}', 'APPROVE', '${activeApp.booking_id}')" class="flex-1 bg-secondary text-on-secondary text-xs font-mono-data py-2.5 rounded uppercase hover:bg-secondary/90 transition-all font-bold">
+                            APPROVE ESCROW
+                        </button>
+                        <button onclick="showToast('Dispatch Refused', 'Rejection notification sent back to Twilio handler...', 'close', '#ffb4ab')" class="border border-error/30 text-error text-xs font-mono-data py-2.5 px-4 rounded uppercase hover:bg-error/10 transition-all">
+                            REJECT
+                        </button>
+                    `;
+                }
+            } else {
+                if (appDetailId) appDetailId.textContent = "REQ-NONE";
+                if (appDetailRisk) {
+                    appDetailRisk.textContent = "CLEAR";
+                    appDetailRisk.className = "hidden";
+                }
+                if (appDetailTitle) appDetailTitle.textContent = "No task selected";
+                if (appDetailDesc) appDetailDesc.textContent = "Select a pending approval task from the queue to review operational status.";
+                if (appDetailValue) appDetailValue.textContent = "--";
+                if (appDetailWeight) appDetailWeight.textContent = "--";
+                if (appDetailSignals) appDetailSignals.innerHTML = `<span class="text-on-surface-variant/40 italic">No request active...</span>`;
+                if (appDetailRoute) appDetailRoute.textContent = "--";
+                if (appDetailActions) appDetailActions.innerHTML = "";
+            }
+        }
+
+        function selectApproval(id) {
+            selectedApprovalId = id;
+            renderApprovalsQueue(currentData);
+        }
+
+        // Explorer view rendering routine
+        function renderDashboardsExplorer(data) {
+            const activeMatchesEl = document.getElementById('exp-matches');
+            const escrowEl = document.getElementById('exp-escrow');
+            if (!activeMatchesEl || !escrowEl) return;
+            
+            activeMatchesEl.textContent = data.stats.active_matches.toString().padStart(2, '0');
+            escrowEl.textContent = `$${Number(data.stats.escrow_value_usd).toLocaleString()}`;
+            
+            // Measure dynamic engine response time
+            const start = performance.now();
+            fetch('/health').then(() => {
+                const latency = (performance.now() - start).toFixed(0);
+                const latEl = document.getElementById('exp-latency');
+                if (latEl) latEl.textContent = `${latency}ms`;
+            }).catch(() => {});
+        }
+
+        // Executive Reports view rendering routine
+        function renderExecutiveReports(data) {
+            const latencyEl = document.getElementById('rep-latency');
+            if (!latencyEl) return;
+            
+            const expLat = document.getElementById('exp-latency');
+            latencyEl.textContent = expLat ? expLat.textContent : '12ms';
+            
+            const nodesEl = document.getElementById('rep-nodes');
+            if (nodesEl) nodesEl.textContent = '4,096';
+        }
+
+        // --- END NEW RENDERING FUNCTIONS ---
+
+        // Toast Notification System
+        function showToast(title, message, icon = 'info', color = '#5E6BFF') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            // Styled like obsidian card with translucent backing
+            toast.className = "flex gap-3 items-start p-3.5 rounded border text-xs transition-all duration-300 opacity-0 translate-y-2 pointer-events-auto shadow-lg max-w-sm w-80 surface-level-2";
+            toast.style.borderColor = color;
+            toast.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.4), 0 0 12px ${color}20`;
+            
+            toast.innerHTML = `
+                <span class="material-icons text-base mt-0.5" style="color: ${color}">${icon}</span>
+                <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+                    <span class="font-mono-data font-bold text-white uppercase tracking-wider text-[10px]">${title}</span>
+                    <span class="text-on-surface-variant font-medium leading-relaxed break-words">${message}</span>
+                </div>
+                <span class="material-icons text-[14px] text-outline-variant hover:text-white cursor-pointer ml-2 shrink-0" onclick="this.parentElement.remove()">close</span>
+            `;
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+            
+            // Auto dismiss
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        // Navigation callbacks
+        function resetDashboard() {
+            document.getElementById('commandBar').value = '';
+            setFilter(null);
+            showToast("Dashboard Reset", "All active ledger matches and telemetry cards synchronized.", "refresh", "#5E6BFF");
+        }
+
+        function focusTelemetry() {
+            document.getElementById('commandBar').value = 'V-';
+            renderBookings(currentData.bookings);
+            renderTelemetry(currentData.vehicles);
+            document.getElementById('commandBar').focus();
+            showToast("Telemetry Filter", "Displaying active carrier vehicles in status grid.", "sensors", "#acc7ff");
+        }
+
+        function focusLedger() {
+            document.getElementById('commandBar').value = 'BK-';
+            renderBookings(currentData.bookings);
+            renderTelemetry(currentData.vehicles);
+            document.getElementById('commandBar').focus();
+            showToast("Ledger Filter", "Displaying transactional matches in ledger table.", "history", "#ffba47");
+        }
+
+        function showMapNotice() {
+            showToast("Fleet GPS Map", "Geospatial telemetry lines are active. Click 'STREAM PING' inside a selected carrier telemetry panel to simulate live coordinate movements.", "map", "#5E6BFF");
+        }
+
+        async function showSystemDiagnostics() {
+            try {
+                const start = performance.now();
+                const res = await fetch('/health');
+                const data = await res.json();
+                const latency = (performance.now() - start).toFixed(0);
+                showToast(
+                    "System Diagnostics", 
+                    `API Status: ${data.status.toUpperCase()}<br>Engine: ${data.service}<br>Ping Latency: ${latency}ms<br>DB Rows: ${currentData.bookings.length} Bookings / ${currentData.vehicles.length} Vehicles`, 
+                    "check_circle", 
+                    "#70ffba"
+                );
+            } catch (err) {
+                showToast("Diagnostics Error", "Backend engine server is unreachable.", "error", "#ffb4ab");
+            }
+        }
+
+        function showSettings() {
+            showToast(
+                "Axle Settings", 
+                `Gateway: META_CLOUD_API<br>Host Node: localhost:8000<br>Poller Sync Rate: 2000ms`, 
+                "settings", 
+                "#outline"
+            );
+        }
+
+        function showNotifications() {
+            const authorizedCount = currentData.bookings.filter(b => b.status === 'ESCROW_AUTHORIZED').length;
+            const confirmedCount = currentData.bookings.filter(b => b.status === 'CONFIRMED').length;
+            const pendingCount = currentData.bookings.filter(b => b.status === 'PENDING_DISPATCH').length;
+            showToast(
+                "Operation Center Logs", 
+                `Current Active Matches: ${pendingCount} Pending | ${confirmedCount} Confirmed | ${authorizedCount} Escrow Secured`, 
+                "notifications", 
+                "#acc7ff"
+            );
+        }
+
+        // Bind Ctrl + K for command search bar focus
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const bar = document.getElementById('commandBar');
+                bar.focus();
+                // Add temporary glowing aura
+                const container = bar.parentElement;
+                container.classList.add('neon-border-active');
+                showToast("Terminal Active", "Command bar focused. Search or filter keys active.", "keyboard", "#5E6BFF");
+                setTimeout(() => {
+                    container.classList.remove('neon-border-active');
+                }, 1500);
+            }
+        });
+    </script>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-10 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+</body>
+</html>
